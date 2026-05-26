@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Webhook Live Monitor</title>
+    <style>
+        body {
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            background: #090d16;
+            color: #a7f3d0;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: #020617;
+            border-radius: 8px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.7);
+            border: 1px solid #10b981;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+        .terminal-header {
+            background: #1e293b;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #10b981;
+        }
+        .terminal-buttons {
+            display: flex;
+            gap: 6px;
+        }
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .dot-red { background: #ef4444; }
+        .dot-yellow { background: #f59e0b; }
+        .dot-green { background: #10b981; }
+        
+        .terminal-title {
+            color: #38bdf8;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .terminal-status {
+            font-size: 12px;
+            color: #10b981;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .pulse {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse-anim 2s infinite;
+        }
+        @keyframes pulse-anim {
+            0% { opacity: 0.4; }
+            50% { opacity: 1; }
+            100% { opacity: 0.4; }
+        }
+        .terminal-body {
+            padding: 20px;
+            min-height: 400px;
+            max-height: 600px;
+            overflow-y: auto;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+        .log-line {
+            margin-bottom: 8px;
+            white-space: pre-wrap;
+            border-left: 3px solid transparent;
+            padding-left: 10px;
+        }
+        .log-add {
+            color: #4ade80;
+            border-left-color: #4ade80;
+        }
+        .log-delete {
+            color: #f87171;
+            border-left-color: #f87171;
+        }
+        .log-update {
+            color: #fbbf24;
+            border-left-color: #fbbf24;
+        }
+        .log-info {
+            color: #94a3b8;
+        }
+        .meta-desc {
+            font-size: 12px;
+            color: #64748b;
+            margin-left: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="terminal-header">
+            <div class="terminal-buttons">
+                <span class="dot dot-red"></span>
+                <span class="dot dot-yellow"></span>
+                <span class="dot dot-green"></span>
+            </div>
+            <div class="terminal-title">bash - Discord Webhook Monitor</div>
+            <div class="terminal-status">
+                <span class="pulse"></span>
+                <span>CONNECTED</span>
+            </div>
+        </div>
+        <div class="terminal-body" id="log-container">
+            <div class="log-line log-info">[System] กำลังรอข้อมูล Webhook แรกจาก Discord Server...</div>
+        </div>
+    </div>
+
+    <script>
+        const eventSource = new EventSource('/api/webhook/events');
+        const logContainer = document.getElementById('log-container');
+
+        // ฟังก์ชันแปล payload เป็นบรรทัด logs สวยๆ
+        function getLogString(data) {
+            const { event, details } = data;
+            if (!details) return null;
+            
+            const time = new Date(data.receivedAt || Date.now()).toLocaleTimeString();
+            
+            if (event === 'role_created') {
+                return {
+                    type: 'add',
+                    text: `[${time}] [+] มีการสร้าง Role ใหม่: ${details.role.name} (ID: ${details.role.id})`
+                };
+            } else if (event === 'role_deleted') {
+                return {
+                    type: 'delete',
+                    text: `[${time}] [-] มีการลบ Role: ${details.role.name} (ID: ${details.role.id})`
+                };
+            } else if (event === 'role_updated') {
+                const changes = details.role.changes || {};
+                const changeDetails = [];
+                for (const key in changes) {
+                    changeDetails.push(`${key} (${changes[key].old} -> ${changes[key].new})`);
+                }
+                const detailsStr = changeDetails.join(', ');
+                return {
+                    type: 'update',
+                    text: `[${time}] [*] มีการแก้ไข Role: ${details.role.name} (ID: ${details.role.id})\n    └─ ข้อมูลที่แก้ไข: ${detailsStr}`
+                };
+            } else if (event === 'member_role_added') {
+                const roleNames = details.member.rolesAdded.map(r => r.name).join(', ');
+                return {
+                    type: 'add',
+                    text: `[${time}] [+] สมาชิก ${details.member.username} ได้รับ Role: ${roleNames} (User ID: ${details.member.userId})`
+                };
+            } else if (event === 'member_role_removed') {
+                const roleNames = details.member.rolesRemoved.map(r => r.name).join(', ');
+                return {
+                    type: 'delete',
+                    text: `[${time}] [-] สมาชิก ${details.member.username} ถูกถอด Role: ${roleNames} (User ID: ${details.member.userId})`
+                };
+            }
+            return null;
+        }
+
+        // ป้องกันการแสดผลซ้ำจากบอทหลายตัว (De-duplication)
+        let lastTimestamp = null;
+        let hasData = false;
+
+        eventSource.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            
+            // ตรวจสอบค่าความซ้ำของ Event
+            if (data.timestamp === lastTimestamp) {
+                return; // ข้ามถ้ารายการซ้ำ
+            }
+            lastTimestamp = data.timestamp;
+
+            const logObj = getLogString(data);
+            if (logObj) {
+                if (!hasData) {
+                    logContainer.innerHTML = '';
+                    hasData = true;
+                }
+                
+                const div = document.createElement('div');
+                div.className = 'log-line log-' + logObj.type;
+                div.textContent = logObj.text;
+                logContainer.appendChild(div);
+                
+                // เลื่อนหน้าจอลงล่างสุดอัตโนมัติ
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+        };
+
+        eventSource.onerror = (err) => {
+            console.log("กำลังเชื่อมต่อระบบ Real-time ใหม่...", err);
+        };
+    </script>
+</body>
+</html>
