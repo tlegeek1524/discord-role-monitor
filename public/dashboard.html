@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Bot Dashboard — Server Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0c0f1a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #7c3aed, #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+        }
+        .header p {
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #1e1b4b, #172554);
+            border: 1px solid #312e81;
+            border-radius: 12px;
+            padding: 16px 24px;
+            text-align: center;
+            min-width: 140px;
+        }
+        .stat-card .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #a78bfa;
+        }
+        .stat-card .stat-label {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Server Grid */
+        .server-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 16px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Server Card */
+        .server-card {
+            background: #111827;
+            border: 1px solid #1f2937;
+            border-radius: 16px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .server-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #7c3aed, #06b6d4);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .server-card:hover {
+            border-color: #374151;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+        }
+        .server-card:hover::before { opacity: 1; }
+
+        .server-card.monitored {
+            border-color: #065f46;
+            background: linear-gradient(135deg, #111827, #0f2419);
+        }
+        .server-card.monitored::before {
+            background: linear-gradient(90deg, #10b981, #34d399);
+            opacity: 1;
+        }
+
+        .server-top {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+        .server-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: 700;
+            color: #fff;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+        .server-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .server-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .server-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #f1f5f9;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .server-id {
+            font-size: 11px;
+            color: #64748b;
+            font-family: 'Fira Code', monospace;
+            margin-top: 2px;
+        }
+
+        .server-stats {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .server-stat {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #94a3b8;
+        }
+        .server-stat .icon {
+            font-size: 16px;
+        }
+
+        /* Toggle Switch */
+        .server-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 14px;
+            border-top: 1px solid #1f2937;
+        }
+        .status-badge {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .status-badge.active {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+        }
+        .status-badge.inactive {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+        }
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+        }
+        .status-badge.active .status-dot {
+            background: #10b981;
+            box-shadow: 0 0 8px #10b981;
+            animation: pulse-dot 2s infinite;
+        }
+        .status-badge.inactive .status-dot {
+            background: #ef4444;
+        }
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .toggle-btn {
+            padding: 8px 18px;
+            border-radius: 8px;
+            border: none;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Inter', sans-serif;
+        }
+        .toggle-btn.connect {
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: #fff;
+        }
+        .toggle-btn.connect:hover {
+            background: linear-gradient(135deg, #047857, #059669);
+            transform: scale(1.05);
+        }
+        .toggle-btn.disconnect {
+            background: linear-gradient(135deg, #dc2626, #ef4444);
+            color: #fff;
+        }
+        .toggle-btn.disconnect:hover {
+            background: linear-gradient(135deg, #b91c1c, #dc2626);
+            transform: scale(1.05);
+        }
+        .toggle-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #64748b;
+        }
+        .loading .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #1f2937;
+            border-top: 3px solid #7c3aed;
+            border-radius: 50%;
+            margin: 0 auto 16px;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            color: #64748b;
+        }
+        .empty-state .emoji { font-size: 48px; margin-bottom: 12px; }
+
+        /* Nav */
+        .nav-links {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .nav-link {
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            text-decoration: none;
+            color: #94a3b8;
+            background: #1e293b;
+            border: 1px solid #334155;
+            transition: all 0.2s;
+        }
+        .nav-link:hover {
+            color: #e2e8f0;
+            border-color: #7c3aed;
+            background: #1e1b4b;
+        }
+        .nav-link.active {
+            color: #a78bfa;
+            border-color: #7c3aed;
+            background: #1e1b4b;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #fff;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s;
+            z-index: 999;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .toast.success { background: #059669; }
+        .toast.error { background: #dc2626; }
+
+        /* Notifications Stacking Container */
+        #notifications-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+            max-width: 360px;
+            width: calc(100% - 48px);
+        }
+        .mini-toast {
+            background: #111827;
+            border: 1px solid #1f2937;
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: #e2e8f0;
+            font-size: 13px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            transform: translateX(120%);
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s;
+            opacity: 0;
+            backdrop-filter: blur(8px);
+        }
+        .mini-toast.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        .mini-toast.hide {
+            transform: translateX(120%);
+            opacity: 0;
+        }
+        .mini-toast-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            font-size: 12px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .mini-toast.add {
+            border-left: 4px solid #10b981;
+        }
+        .mini-toast.add .mini-toast-icon {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+        }
+        .mini-toast.delete {
+            border-left: 4px solid #ef4444;
+        }
+        .mini-toast.delete .mini-toast-icon {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+        }
+        .mini-toast.update {
+            border-left: 4px solid #f59e0b;
+        }
+        .mini-toast.update .mini-toast-icon {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+        }
+        .mini-toast-content {
+            flex: 1;
+            min-width: 0;
+        }
+        .mini-toast-title {
+            font-weight: 600;
+            margin-bottom: 2px;
+            color: #f1f5f9;
+        }
+        .mini-toast-desc {
+            color: #94a3b8;
+            font-size: 12px;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+        .mini-toast-meta {
+            font-size: 10px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 Discord Bot Dashboard</h1>
+        <p>จัดการเซิร์ฟเวอร์ที่บอทกำลังเชื่อมต่อและ Monitor อยู่</p>
+    </div>
+
+    <div class="nav-links">
+        <a href="/dashboard" class="nav-link active">📡 Dashboard</a>
+        <a href="/api/webhook/local" class="nav-link">📋 Monitor Logs</a>
+        <a href="/api-docs" class="nav-link">📖 API Docs</a>
+    </div>
+
+    <div class="stats-bar">
+        <div class="stat-card">
+            <div class="stat-value" id="total-servers">—</div>
+            <div class="stat-label">เซิร์ฟเวอร์ทั้งหมด</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="monitored-count">—</div>
+            <div class="stat-label">กำลัง Monitor</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="total-members">—</div>
+            <div class="stat-label">สมาชิกรวม</div>
+        </div>
+    </div>
+
+    <div id="server-container">
+        <div class="loading">
+            <div class="spinner"></div>
+            <div>กำลังโหลดข้อมูลเซิร์ฟเวอร์...</div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const container = document.getElementById('server-container');
+        const toast = document.getElementById('toast');
+
+        function showToast(msg, type = 'success') {
+            toast.textContent = msg;
+            toast.className = 'toast show ' + type;
+            setTimeout(() => { toast.className = 'toast'; }, 3000);
+        }
+
+        function getInitial(name) {
+            return name ? name.charAt(0).toUpperCase() : '?';
+        }
+
+        async function loadGuilds() {
+            try {
+                const res = await fetch('/api/guilds');
+                const data = await res.json();
+                
+                if (!data.success || !data.guilds.length) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="emoji">🔌</div>
+                            <div>บอทยังไม่ได้เชื่อมต่อเซิร์ฟเวอร์ใดๆ</div>
+                        </div>`;
+                    return;
+                }
+
+                const guilds = data.guilds;
+                
+                // อัปเดต Stats
+                const totalServers = guilds.length;
+                const monitoredCount = guilds.filter(g => g.monitored).length;
+                const totalMembers = guilds.reduce((sum, g) => sum + g.memberCount, 0);
+                
+                document.getElementById('total-servers').textContent = totalServers;
+                document.getElementById('monitored-count').textContent = monitoredCount;
+                document.getElementById('total-members').textContent = totalMembers.toLocaleString();
+
+                // สร้าง Cards
+                container.innerHTML = '<div class="server-grid">' + guilds.map(guild => `
+                    <div class="server-card ${guild.monitored ? 'monitored' : ''}" id="guild-${guild.id}">
+                        <div class="server-top">
+                            <div class="server-icon">
+                                ${guild.icon 
+                                    ? `<img src="${guild.icon}" alt="${guild.name}">` 
+                                    : getInitial(guild.name)}
+                            </div>
+                            <div class="server-info">
+                                <div class="server-name">${guild.name}</div>
+                                <div class="server-id">ID: ${guild.id}</div>
+                            </div>
+                        </div>
+                        <div class="server-stats">
+                            <div class="server-stat">
+                                <span class="icon">👥</span>
+                                <span>${guild.memberCount.toLocaleString()} สมาชิก</span>
+                            </div>
+                            <div class="server-stat">
+                                <span class="icon">🏷️</span>
+                                <span>${guild.rolesCount} Roles</span>
+                            </div>
+                        </div>
+                        <div class="server-footer">
+                            <div class="status-badge ${guild.monitored ? 'active' : 'inactive'}">
+                                <span class="status-dot"></span>
+                                ${guild.monitored ? 'กำลัง Monitor' : 'ปิดอยู่'}
+                            </div>
+                            <button class="toggle-btn ${guild.monitored ? 'disconnect' : 'connect'}" 
+                                    onclick="toggleGuild('${guild.id}')">
+                                ${guild.monitored ? '🔌 Disconnect' : '🔗 Connect'}
+                            </button>
+                        </div>
+                    </div>
+                `).join('') + '</div>';
+                
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="emoji">⚠️</div>
+                        <div>ไม่สามารถเชื่อมต่อ API ได้</div>
+                    </div>`;
+            }
+        }
+
+        async function toggleGuild(guildId) {
+            const btn = document.querySelector(`#guild-${guildId} .toggle-btn`);
+            btn.disabled = true;
+            btn.textContent = '⏳ กำลังสลับ...';
+
+            try {
+                const res = await fetch(`/api/guilds/${guildId}/toggle`, { method: 'POST' });
+                const data = await res.json();
+
+                if (data.success) {
+                    const msg = data.monitored 
+                        ? '✅ เปิด Monitor เซิร์ฟเวอร์แล้ว' 
+                        : '🔌 ปิด Monitor เซิร์ฟเวอร์แล้ว';
+                    showToast(msg, 'success');
+                    await loadGuilds();
+                }
+            } catch (error) {
+                showToast('❌ เกิดข้อผิดพลาด', 'error');
+                btn.disabled = false;
+            }
+        }
+
+        // โหลดข้อมูลเริ่มต้นและ Auto-refresh ทุก 30 วินาที
+        loadGuilds();
+        setInterval(loadGuilds, 30000);
+
+        // ระบบ Real-time Notifications (SSE)
+        const notificationsContainer = document.createElement('div');
+        notificationsContainer.id = 'notifications-container';
+        document.body.appendChild(notificationsContainer);
+
+        function showMiniNotification(type, title, desc, meta) {
+            const item = document.createElement('div');
+            item.className = `mini-toast ${type}`;
+            
+            let iconText = '★';
+            if (type === 'add') iconText = '＋';
+            if (type === 'delete') iconText = '－';
+
+            item.innerHTML = `
+                <div class="mini-toast-icon">${iconText}</div>
+                <div class="mini-toast-content">
+                    <div class="mini-toast-title">${title}</div>
+                    <div class="mini-toast-desc">${desc}</div>
+                    <div class="mini-toast-meta">${meta}</div>
+                </div>
+            `;
+            
+            notificationsContainer.appendChild(item);
+            
+            // รอเฟรมถัดไปแล้วค่อยใส่ class .show เพื่อให้ CSS Transition ทำงาน
+            requestAnimationFrame(() => {
+                item.classList.add('show');
+            });
+            
+            // ลบการแจ้งเตือนหลังจากผ่านไป 4.5 วินาที
+            setTimeout(() => {
+                item.classList.remove('show');
+                item.classList.add('hide');
+                setTimeout(() => {
+                    item.remove();
+                }, 350);
+            }, 4500);
+        }
+
+        let lastEventTimestamp = null;
+        const eventSource = new EventSource('/api/webhook/events');
+
+        eventSource.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                
+                if (data.timestamp === lastEventTimestamp) {
+                    return; // ป้องกันการแสดงผลซ้ำ
+                }
+                lastEventTimestamp = data.timestamp;
+
+                const { event: eventName, details } = data;
+                if (!details) return;
+
+                const guildName = details.guild ? details.guild.name : 'ไม่ทราบชื่อเซิร์ฟเวอร์';
+                const time = new Date(data.receivedAt || Date.now()).toLocaleTimeString();
+
+                if (eventName === 'role_created') {
+                    showMiniNotification(
+                        'add',
+                        '➕ สร้าง Role ใหม่',
+                        `สร้าง Role "${details.role.name}" ในเซิร์ฟเวอร์`,
+                        `${guildName} • ${time}`
+                    );
+                    loadGuilds(); // รีโหลดข้อมูลเพื่ออัปเดตหน้าเว็บทันที
+                } else if (eventName === 'role_deleted') {
+                    showMiniNotification(
+                        'delete',
+                        '➖ ลบ Role',
+                        `ลบ Role "${details.role.name}" ออกจากเซิร์ฟเวอร์`,
+                        `${guildName} • ${time}`
+                    );
+                    loadGuilds(); // รีโหลดข้อมูลเพื่ออัปเดตหน้าเว็บทันที
+                } else if (eventName === 'role_updated') {
+                    const changes = details.role.changes || {};
+                    const changeFields = Object.keys(changes).map(field => {
+                        const translation = {
+                            name: 'ชื่อ',
+                            color: 'สี',
+                            permissions: 'สิทธิ์การใช้งาน',
+                            position: 'ตำแหน่ง'
+                        };
+                        return translation[field] || field;
+                    }).join(', ');
+                    
+                    showMiniNotification(
+                        'update',
+                        '✏️ แก้ไข Role',
+                        `แก้ไขข้อมูลของ Role "${details.role.name}" (ฟิลด์ที่เปลี่ยน: ${changeFields})`,
+                        `${guildName} • ${time}`
+                    );
+                    loadGuilds(); // รีโหลดข้อมูลเพื่ออัปเดตหน้าเว็บทันที
+                } else if (eventName === 'member_role_added') {
+                    const roleNames = details.member.rolesAdded.map(r => r.name).join(', ');
+                    showMiniNotification(
+                        'add',
+                        '👤 สมาชิกได้รับ Role',
+                        `${details.member.username} ได้รับ Role: ${roleNames}`,
+                        `${guildName} • ${time}`
+                    );
+                } else if (eventName === 'member_role_removed') {
+                    const roleNames = details.member.rolesRemoved.map(r => r.name).join(', ');
+                    showMiniNotification(
+                        'delete',
+                        '👤 สมาชิกถูกถอด Role',
+                        `${details.member.username} ถูกถอด Role: ${roleNames}`,
+                        `${guildName} • ${time}`
+                    );
+                }
+            } catch (err) {
+                console.error('Error parsing event data:', err);
+            }
+        };
+
+        eventSource.onerror = (err) => {
+            console.log("กำลังเชื่อมต่อระบบ Real-time ใหม่...", err);
+        };
+    </script>
+</body>
+</html>

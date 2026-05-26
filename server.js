@@ -2,7 +2,7 @@ const express = require('express');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
 const path = require('path');
-const { getRolesList } = require('./bot');
+const { getRolesList, getGuildsList, toggleGuildMonitoring } = require('./bot');
 
 const app = express();
 app.use(express.json());
@@ -79,6 +79,23 @@ app.get('/api/roles', async (req, res) => {
         success: true,
         roles: roles
     });
+});
+
+// API ดึงรายชื่อ Guild (เซิร์ฟเวอร์) ทั้งหมดที่บอทเข้าร่วมอยู่
+app.get('/api/guilds', async (req, res) => {
+    const guilds = await getGuildsList();
+    res.json({ success: true, guilds });
+});
+
+// API เปิด/ปิดการ Monitor ของ Guild
+app.post('/api/guilds/:id/toggle', (req, res) => {
+    const result = toggleGuildMonitoring(req.params.id);
+    res.json({ success: true, ...result });
+});
+
+// หน้า Dashboard แสดงรายชื่อ Server
+app.get('/dashboard', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
 let latestWebhook = null;
