@@ -272,5 +272,6 @@ module.exports = {
     getRolesList,
     getGuildsList,
     toggleGuildMonitoring,
+    isGuildMonitored,
     startBot
 };

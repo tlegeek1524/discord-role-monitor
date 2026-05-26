@@ -2,7 +2,7 @@ const express = require('express');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
 const path = require('path');
-const { getRolesList, getGuildsList, toggleGuildMonitoring } = require('./bot');
+const { getRolesList, getGuildsList, toggleGuildMonitoring, isGuildMonitored } = require('./bot');
 
 const app = express();
 app.use(express.json());
@@ -107,9 +107,12 @@ app.get('/api/webhook/events', (req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     
-    // ส่งข้อมูลล่าสุดให้ทันทีถ้ามี
+    // ส่งข้อมูลล่าสุดให้ทันทีถ้ามี (และถ้ายังคงได้รับการ Monitor อยู่)
     if (latestWebhook) {
-        res.write(`data: ${JSON.stringify(latestWebhook)}\n\n`);
+        const guildId = latestWebhook.details && latestWebhook.details.guild ? latestWebhook.details.guild.id : null;
+        if (!guildId || isGuildMonitored(guildId)) {
+            res.write(`data: ${JSON.stringify(latestWebhook)}\n\n`);
+        }
     }
     
     clients.push(res);
@@ -160,6 +163,15 @@ app.get('/api/webhook/events', (req, res) => {
  *                   example: "Webhook received locally"
  */
 app.post('/api/webhook/local', (req, res) => {
+    // ตรวจสอบว่า Guild นี้ถูกตัดการเชื่อมต่ออยู่หรือไม่
+    const guildId = req.body.details && req.body.details.guild ? req.body.details.guild.id : null;
+    if (guildId && !isGuildMonitored(guildId)) {
+        return res.status(400).json({
+            success: false,
+            message: `Guild ${guildId} is disconnected. Webhook ignored.`
+        });
+    }
+
     // บันทึกเฉพาะข้อมูลล่าสุดตัวเดียว
     latestWebhook = {
         receivedAt: new Date().toISOString(),
@@ -188,6 +200,10 @@ app.post('/api/webhook/local', (req, res) => {
  *           application/json:
  *             schema:
  *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
  */
 app.get('/api/webhook/local', (req, res) => {
     // หากเข้าใช้งานผ่าน Web Browser ปกติ (รับส่งค่าเป็น HTML)
@@ -201,6 +217,16 @@ app.get('/api/webhook/local', (req, res) => {
             message: "ยังไม่มีการอัปเดต Webhook ส่งเข้ามาในระบบ"
         });
     }
+
+    // ตรวจสอบว่า Guild ของ Webhook ล่าสุดนี้กำลังถูกตัดการเชื่อมต่อหรือไม่
+    const guildId = latestWebhook.details && latestWebhook.details.guild ? latestWebhook.details.guild.id : null;
+    if (guildId && !isGuildMonitored(guildId)) {
+        return res.json({
+            success: true,
+            message: "ยังไม่มีการอัปเดต Webhook ส่งเข้ามาในระบบ"
+        });
+    }
+
     res.json(latestWebhook);
 });
 
