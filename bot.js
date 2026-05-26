@@ -8,8 +8,30 @@ const client = new Client({
     ]
 });
 
-// เก็บรายชื่อ Guild ที่ถูก Disconnect (ปิด Monitor) — เริ่มต้นว่างเปล่า = Monitor ทุก Guild
-const disconnectedGuilds = new Set();
+const fs = require('fs');
+const path = require('path');
+
+const DISCONNECTED_FILE = path.join(__dirname, 'disconnected_guilds.json');
+
+// เก็บรายชื่อ Guild ที่ถูก Disconnect (ปิด Monitor) — โหลดจากไฟล์หากมีอยู่
+let disconnectedGuilds = new Set();
+try {
+    if (fs.existsSync(DISCONNECTED_FILE)) {
+        const data = fs.readFileSync(DISCONNECTED_FILE, 'utf8');
+        disconnectedGuilds = new Set(JSON.parse(data));
+    }
+} catch (error) {
+    console.error('Error loading disconnected guilds file:', error);
+}
+
+// บันทึกสถานะลงไฟล์
+function saveDisconnectedGuilds() {
+    try {
+        fs.writeFileSync(DISCONNECTED_FILE, JSON.stringify([...disconnectedGuilds]), 'utf8');
+    } catch (error) {
+        console.error('Error saving disconnected guilds file:', error);
+    }
+}
 
 // ฟังก์ชันดึงรายชื่อ Guild (Server) ทั้งหมดที่บอทเข้าร่วมอยู่
 async function getGuildsList() {
@@ -57,12 +79,14 @@ function isGuildMonitored(guildId) {
     return monitored;
 }
 
-// ตัวช่วย: แปลง guildId เป็น string ก่อนใส่ disconnectedGuilds
+// ตัวช่วย: แปลง guildId เป็น string ก่อนใส่ disconnectedGuilds และบันทึกไฟล์
 function disconnectGuild(guildId) {
     disconnectedGuilds.add(String(guildId));
+    saveDisconnectedGuilds();
 }
 function reconnectGuild(guildId) {
     disconnectedGuilds.delete(String(guildId));
+    saveDisconnectedGuilds();
 }
 
 // ฟังก์ชันดึงรายชื่อ Role ทั้งหมด
