@@ -615,7 +615,7 @@
                     showMiniNotification(
                         'add',
                         '➕ สร้าง Role ใหม่',
-                        `สร้าง Role "${details.role.name}" ในเซิร์ฟเวอร์`,
+                        `สร้าง Role "${details.role.name}" ในเซิร์ฟเวอร์ "${guildName}"`,
                         `${guildName} • ${time}`
                     );
                     loadGuilds(); // รีโหลดข้อมูลเพื่ออัปเดตหน้าเว็บทันที
@@ -623,7 +623,7 @@
                     showMiniNotification(
                         'delete',
                         '➖ ลบ Role',
-                        `ลบ Role "${details.role.name}" ออกจากเซิร์ฟเวอร์`,
+                        `ลบ Role "${details.role.name}" ออกจากเซิร์ฟเวอร์ "${guildName}"`,
                         `${guildName} • ${time}`
                     );
                     loadGuilds(); // รีโหลดข้อมูลเพื่ออัปเดตหน้าเว็บทันที
@@ -642,7 +642,7 @@
                     showMiniNotification(
                         'update',
                         '✏️ แก้ไข Role',
-                        `แก้ไขข้อมูลของ Role "${details.role.name}" (ฟิลด์ที่เปลี่ยน: ${changeFields})`,
+                        `แก้ไขข้อมูลของ Role "${details.role.name}" ในเซิร์ฟเวอร์ "${guildName}" (ฟิลด์ที่เปลี่ยน: ${changeFields})`,
                         `${guildName} • ${time}`
                     );
                     loadGuilds(); // รีโหลดข้อมูลเพื่ออัปเดตหน้าเว็บทันที
@@ -651,7 +651,7 @@
                     showMiniNotification(
                         'add',
                         '👤 สมาชิกได้รับ Role',
-                        `${details.member.username} ได้รับ Role: ${roleNames}`,
+                        `${details.member.username} ได้รับ Role: ${roleNames} ในเซิร์ฟเวอร์ "${guildName}"`,
                         `${guildName} • ${time}`
                     );
                 } else if (eventName === 'member_role_removed') {
@@ -659,7 +659,7 @@
                     showMiniNotification(
                         'delete',
                         '👤 สมาชิกถูกถอด Role',
-                        `${details.member.username} ถูกถอด Role: ${roleNames}`,
+                        `${details.member.username} ถูกถอด Role: ${roleNames} จากเซิร์ฟเวอร์ "${guildName}"`,
                         `${guildName} • ${time}`
                     );
                 }
