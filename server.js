@@ -190,8 +190,8 @@ app.get('/api/webhook/local', (req, res) => {
 // ฟังก์ชันเริ่มการทำงานของ Express Server
 function startServer() {
     const PORT = process.env.PORT || 3000;
-    app.listen(PORT, () => {
-        // เงียบไว้
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`Server running on port ${PORT}`);
     });
 }
 
