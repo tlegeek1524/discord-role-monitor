@@ -93,25 +93,29 @@ function reconnectGuild(guildId) {
 async function getRolesList() {
     const rolesList = [];
     try {
-        const guilds = await client.guilds.cache;
-        for (const [guildId, guild] of guilds) {
-            const roles = await guild.roles.fetch();
-            roles.forEach(role => {
-                rolesList.push({
-                    guildId: guild.id,
-                    guildName: guild.name,
-                    id: role.id,
-                    name: role.name,
-                    color: role.hexColor,
-                    position: role.rawPosition,
-                    permissions: role.permissions.bitfield.toString()
+        const guilds = client.guilds.cache;
+        await Promise.all(Array.from(guilds.values()).map(async (guild) => {
+            try {
+                const roles = await guild.roles.fetch();
+                roles.forEach(role => {
+                    rolesList.push({
+                        guildId: guild.id,
+                        guildName: guild.name,
+                        id: role.id,
+                        name: role.name,
+                        color: role.hexColor,
+                        position: role.rawPosition,
+                        permissions: role.permissions.bitfield.toString()
+                    });
                 });
-            });
-        }
+            } catch (err) {
+                console.error(`Error fetching roles for guild ${guild.name}:`, err);
+            }
+        }));
     } catch (error) {
         // เงียบไว้
     }
-    return rolesList;
+    return rolesList.sort((a, b) => b.position - a.position);
 }
 
 // ฟังก์ชันส่ง Webhook แจ้งเตือนอัปเดตแบบ Real-time ไปยัง Backend อื่น
@@ -144,13 +148,19 @@ async function triggerWebhook(eventName, payloadData = {}, guildId = null) {
 }
 
 client.once('ready', async () => {
+    console.log(`Bot logged in as ${client.user.tag}`);
+    console.log(`Invite link: https://discord.com/api/oauth2/authorize?client_id=${client.user.id}&permissions=8&scope=bot`);
     try {
-        // อัปเดต Cache ของ Guilds และ Roles ตอนเริ่มต้น
-        const guilds = await client.guilds.fetch();
-        for (const [guildId, oauthGuild] of guilds) {
-            const guild = await oauthGuild.fetch();
-            await guild.roles.fetch();
-        }
+        // อัปเดต Cache ของ Guilds และ Roles ตอนเริ่มต้นแบบ Parallel
+        const oauthGuilds = await client.guilds.fetch();
+        await Promise.all(Array.from(oauthGuilds.values()).map(async (oauthGuild) => {
+            try {
+                const guild = await oauthGuild.fetch();
+                await guild.roles.fetch();
+            } catch (err) {
+                // ข้าม Guild ที่ไม่มีสิทธิ์เข้าถึงหรือเกิดข้อผิดพลาด
+            }
+        }));
     } catch (error) {
         // เงียบไว้
     }

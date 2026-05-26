@@ -324,65 +324,93 @@
             right: 24px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
             z-index: 1000;
-            max-width: 360px;
+            max-width: 380px;
             width: calc(100% - 48px);
         }
         .mini-toast {
-            background: #111827;
-            border: 1px solid #1f2937;
-            border-radius: 10px;
-            padding: 12px 16px;
+            background: rgba(17, 24, 39, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 14px 16px;
             color: #e2e8f0;
             font-size: 13px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            box-shadow: 
+                0 4px 6px -1px rgba(0, 0, 0, 0.1),
+                0 10px 25px -5px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
             display: flex;
             align-items: flex-start;
-            gap: 12px;
-            transform: translateX(120%);
-            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s;
+            gap: 14px;
+            transform: translateX(120%) scale(0.95);
+            transition: 
+                transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), 
+                opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             opacity: 0;
-            backdrop-filter: blur(8px);
+            backdrop-filter: blur(12px) saturate(180%);
+            position: relative;
+            overflow: hidden;
+        }
+        .mini-toast::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 4px;
+            border-radius: 4px 0 0 4px;
         }
         .mini-toast.show {
-            transform: translateX(0);
+            transform: translateX(0) scale(1);
             opacity: 1;
         }
         .mini-toast.hide {
-            transform: translateX(120%);
+            transform: translateX(120%) scale(0.95);
             opacity: 0;
         }
         .mini-toast-icon {
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            font-size: 12px;
-            font-weight: bold;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
             flex-shrink: 0;
+            margin-top: 1px;
+        }
+        .mini-toast-icon svg {
+            width: 15px;
+            height: 15px;
         }
         .mini-toast.add {
-            border-left: 4px solid #10b981;
+            border-color: rgba(16, 185, 129, 0.15);
+        }
+        .mini-toast.add::before {
+            background: linear-gradient(180deg, #34d399, #10b981);
         }
         .mini-toast.add .mini-toast-icon {
-            background: rgba(16, 185, 129, 0.15);
+            background: rgba(16, 185, 129, 0.12);
             color: #34d399;
         }
         .mini-toast.delete {
-            border-left: 4px solid #ef4444;
+            border-color: rgba(239, 68, 68, 0.15);
+        }
+        .mini-toast.delete::before {
+            background: linear-gradient(180deg, #f87171, #ef4444);
         }
         .mini-toast.delete .mini-toast-icon {
-            background: rgba(239, 68, 68, 0.15);
+            background: rgba(239, 68, 68, 0.12);
             color: #f87171;
         }
         .mini-toast.update {
-            border-left: 4px solid #f59e0b;
+            border-color: rgba(245, 158, 11, 0.15);
+        }
+        .mini-toast.update::before {
+            background: linear-gradient(180deg, #fbbf24, #f59e0b);
         }
         .mini-toast.update .mini-toast-icon {
-            background: rgba(245, 158, 11, 0.15);
+            background: rgba(245, 158, 11, 0.12);
             color: #fbbf24;
         }
         .mini-toast-content {
@@ -391,19 +419,23 @@
         }
         .mini-toast-title {
             font-weight: 600;
-            margin-bottom: 2px;
-            color: #f1f5f9;
+            margin-bottom: 3px;
+            color: #ffffff;
+            font-size: 13.5px;
         }
         .mini-toast-desc {
-            color: #94a3b8;
+            color: #cbd5e1;
             font-size: 12px;
-            line-height: 1.4;
+            line-height: 1.45;
             word-break: break-word;
         }
         .mini-toast-meta {
             font-size: 10px;
             color: #64748b;
-            margin-top: 4px;
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
     </style>
 </head>
@@ -563,12 +595,17 @@
             const item = document.createElement('div');
             item.className = `mini-toast ${type}`;
             
-            let iconText = '★';
-            if (type === 'add') iconText = '＋';
-            if (type === 'delete') iconText = '－';
+            let iconSvg = '';
+            if (type === 'add') {
+                iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+            } else if (type === 'delete') {
+                iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+            } else {
+                iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>`;
+            }
 
             item.innerHTML = `
-                <div class="mini-toast-icon">${iconText}</div>
+                <div class="mini-toast-icon">${iconSvg}</div>
                 <div class="mini-toast-content">
                     <div class="mini-toast-title">${title}</div>
                     <div class="mini-toast-desc">${desc}</div>
@@ -614,35 +651,38 @@
                 if (eventName === 'role_created') {
                     showMiniNotification(
                         'add',
-                        '➕ สร้าง Role ใหม่',
-                        `สร้าง Role "${details.role.name}" ในเซิร์ฟเวอร์ "${guildName}"`,
+                        'สร้าง Role',
+                        `"${details.role.name}"`,
                         `${guildName} • ${time}`
                     );
                     loadGuilds(); // รีโหลดข้อมูลเพื่ออัปเดตหน้าเว็บทันที
                 } else if (eventName === 'role_deleted') {
                     showMiniNotification(
                         'delete',
-                        '➖ ลบ Role',
-                        `ลบ Role "${details.role.name}" ออกจากเซิร์ฟเวอร์ "${guildName}"`,
+                        'ลบ Role',
+                        `"${details.role.name}"`,
                         `${guildName} • ${time}`
                     );
                     loadGuilds(); // รีโหลดข้อมูลเพื่ออัปเดตหน้าเว็บทันที
                 } else if (eventName === 'role_updated') {
                     const changes = details.role.changes || {};
-                    const changeFields = Object.keys(changes).map(field => {
+                    const changeDetails = Object.keys(changes).map(field => {
                         const translation = {
                             name: 'ชื่อ',
                             color: 'สี',
-                            permissions: 'สิทธิ์การใช้งาน',
+                            permissions: 'สิทธิ์',
                             position: 'ตำแหน่ง'
                         };
-                        return translation[field] || field;
+                        const label = translation[field] || field;
+                        const oldVal = changes[field].old;
+                        const newVal = changes[field].new;
+                        return `${label}: "${oldVal}" ➔ "${newVal}"`;
                     }).join(', ');
                     
                     showMiniNotification(
                         'update',
-                        '✏️ แก้ไข Role',
-                        `แก้ไขข้อมูลของ Role "${details.role.name}" ในเซิร์ฟเวอร์ "${guildName}" (ฟิลด์ที่เปลี่ยน: ${changeFields})`,
+                        'แก้ไข Role',
+                        `"${details.role.name}" (${changeDetails})`,
                         `${guildName} • ${time}`
                     );
                     loadGuilds(); // รีโหลดข้อมูลเพื่ออัปเดตหน้าเว็บทันที
@@ -650,16 +690,16 @@
                     const roleNames = details.member.rolesAdded.map(r => r.name).join(', ');
                     showMiniNotification(
                         'add',
-                        '👤 สมาชิกได้รับ Role',
-                        `${details.member.username} ได้รับ Role: ${roleNames} ในเซิร์ฟเวอร์ "${guildName}"`,
+                        'มอบ Role',
+                        `"${details.member.username}" ➔ ${roleNames}`,
                         `${guildName} • ${time}`
                     );
                 } else if (eventName === 'member_role_removed') {
                     const roleNames = details.member.rolesRemoved.map(r => r.name).join(', ');
                     showMiniNotification(
                         'delete',
-                        '👤 สมาชิกถูกถอด Role',
-                        `${details.member.username} ถูกถอด Role: ${roleNames} จากเซิร์ฟเวอร์ "${guildName}"`,
+                        'ถอด Role',
+                        `"${details.member.username}" ➔ ${roleNames}`,
                         `${guildName} • ${time}`
                     );
                 }
